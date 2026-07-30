@@ -1,0 +1,42 @@
+{
+  "upi_id": "admin@upi",
+  "admin_name": "VIP Premium Admin",
+  "admin_id": "123456789",
+  "channel_id": "-100123456789",
+  "course_link": "https://t.me/+SampleVIPAccessLink",
+  "merchant": {
+    "enabled": false,
+    "merchant_id": "",
+    "merchant_token": "",
+    "upi_id": "admin@upi"
+  },
+  "welcome_message": "🚀 *Welcome to Exclusive VIP Membership!*\n\nApne manpasand plan ko select karein. Payment hone ke baad aapko automatic VIP Channel/Course ka Access mil jayega.",
+  "demo_videos": [
+    "🎬 *Demo Video 1: VIP Channel Content Overview*\nhttps://t.me/demo_sample_video/1",
+    "🎬 *Demo Video 2: Proof & Daily Updates*\nhttps://t.me/demo_sample_video/2"
+  ],
+  "plans": [
+    {
+      "id": "1",
+      "name": "1 Month VIP Access",
+      "price": 199
+    },
+    {
+      "id": "2",
+      "name": "3 Months VIP Access",
+      "price": 499
+    },
+    {
+      "id": "3",
+      "name": "1 Year VIP Access",
+      "price": 999
+    },
+    {
+      "id": "4",
+      "name": "Lifetime VIP Access",
+      "price": 1999
+    }
+  ],
+  "admin_password": "admin123pass",
+  "payments": {}
+}

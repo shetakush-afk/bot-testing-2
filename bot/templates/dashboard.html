@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Telegram VIP Bot</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Header Navbar -->
+    <nav class="navbar">
+        <div class="brand">
+            <div class="brand-icon"><i class="fa-solid fa-bolt"></i></div>
+            <span>VIP Bot Admin Panel</span>
+        </div>
+        <div class="nav-right">
+            <span class="user-badge"><i class="fa-solid fa-shield-halved"></i> Domain Admin</span>
+            <a href="/logout" class="btn-logout"><i class="fa-solid fa-power-off"></i> Logout</a>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <div class="dashboard-container">
+
+        <!-- Notification Message -->
+        {% if msg %}
+        <div class="alert alert-success">
+            <i class="fa-solid fa-circle-check"></i> {{ msg }}
+        </div>
+        {% endif %}
+        {% if err %}
+        <div class="alert alert-error">
+            <i class="fa-solid fa-triangle-exclamation"></i> {{ err }}
+        </div>
+        {% endif %}
+
+        <!-- KPI Cards Grid -->
+        <div class="stats-grid">
+            <div class="glass-panel stat-card">
+                <div class="stat-info">
+                    <h3>Total Revenue</h3>
+                    <div class="stat-value" style="color: #34d399;">₹{{ total_revenue }}</div>
+                </div>
+                <div class="stat-icon emerald"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+            </div>
+            <div class="glass-panel stat-card">
+                <div class="stat-info">
+                    <h3>Pending Approvals</h3>
+                    <div class="stat-value" style="color: #fbbf24;">{{ pending_count }}</div>
+                </div>
+                <div class="stat-icon amber"><i class="fa-solid fa-clock"></i></div>
+            </div>
+            <div class="glass-panel stat-card">
+                <div class="stat-info">
+                    <h3>Approved Users</h3>
+                    <div class="stat-value" style="color: #c084fc;">{{ approved_count }}</div>
+                </div>
+                <div class="stat-icon purple"><i class="fa-solid fa-user-check"></i></div>
+            </div>
+            <div class="glass-panel stat-card">
+                <div class="stat-info">
+                    <h3>Rejected Requests</h3>
+                    <div class="stat-value" style="color: #f87171;">{{ rejected_count }}</div>
+                </div>
+                <div class="stat-icon rose"><i class="fa-solid fa-user-xmark"></i></div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab('paymentsTab', this)">
+                <i class="fa-solid fa-receipt"></i> Payment Verification Requests
+            </button>
+            <button class="tab-btn" onclick="switchTab('settingsTab', this)">
+                <i class="fa-solid fa-sliders"></i> Bot & UPI Settings
+            </button>
+        </div>
+
+        <!-- Payments Tab -->
+        <div id="paymentsTab" class="tab-content active">
+            <div class="glass-panel" style="padding: 1.5rem;">
+                <div class="card-title">
+                    <i class="fa-solid fa-list-check" style="color: var(--primary);"></i> User Payment Requests & Approvals
+                </div>
+
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>User Info</th>
+                                <th>Selected Plan</th>
+                                <th>Amount</th>
+                                <th>UTR / Txn ID</th>
+                                <th>Screenshot</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if payments %}
+                                {% for p_id, p in payments.items()|reverse %}
+                                <tr>
+                                    <td style="color: var(--text-secondary); font-size: 0.85rem;">{{ p.timestamp }}</td>
+                                    <td>
+                                        <strong>{{ p.user_name }}</strong><br>
+                                        <small style="color: #a5b4fc;">@{{ p.username if p.username else 'N/A' }} (ID: {{ p.user_id }})</small>
+                                    </td>
+                                    <td><span style="font-weight: 500;">{{ p.plan_name }}</span></td>
+                                    <td><strong style="color: #34d399;">₹{{ p.price }}</strong></td>
+                                    <td><code style="background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 6px; font-family: monospace;">{{ p.utr }}</code></td>
+                                    <td>
+                                        {% if p.photo_path %}
+                                        <button class="btn-sm btn-screenshot" onclick="showScreenshot('{{ p.photo_path }}')">
+                                            <i class="fa-solid fa-image"></i> View Photo
+                                        </button>
+                                        {% else %}
+                                        <span style="color: var(--text-muted);">No photo</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if p.status == 'PENDING' %}
+                                            <span class="badge badge-pending">PENDING</span>
+                                        {% elif p.status == 'APPROVED' %}
+                                            <span class="badge badge-approved">APPROVED</span>
+                                        {% else %}
+                                            <span class="badge badge-rejected">REJECTED</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if p.status == 'PENDING' %}
+                                            <div style="display: flex; gap: 0.4rem;">
+                                                <form action="/approve_payment" method="POST" style="display: inline;">
+                                                    <input type="hidden" name="payment_id" value="{{ p_id }}">
+                                                    <button type="submit" class="btn-sm btn-approve">
+                                                        <i class="fa-solid fa-check"></i> Approve
+                                                    </button>
+                                                </form>
+                                                <form action="/reject_payment" method="POST" style="display: inline;">
+                                                    <input type="hidden" name="payment_id" value="{{ p_id }}">
+                                                    <button type="submit" class="btn-sm btn-reject">
+                                                        <i class="fa-solid fa-xmark"></i> Reject
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        {% else %}
+                                            <span style="color: var(--text-muted); font-size: 0.85rem;">Processed</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                                        Abhi koi payment request nahi aayi hai.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settingsTab" class="tab-content">
+            <div class="settings-grid">
+
+                <!-- Paytm Merchant Auto-Approve Payment Gateway -->
+                <div class="glass-panel" style="padding: 1.5rem; grid-column: 1 / -1;">
+                    <div class="card-title">
+                        <i class="fa-solid fa-credit-card" style="color: #fbbf24;"></i> Paytm Merchant Auto-Approve Gateway Settings
+                    </div>
+
+                    <form action="/update_merchant" method="POST">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                            <div class="form-group">
+                                <label><i class="fa-solid fa-id-badge"></i> 1. Merchant ID (Paytm MID)</label>
+                                <input type="text" name="merchant_id" class="form-control" value="{{ config.merchant.merchant_id if config.merchant else '' }}" placeholder="Enter Paytm Merchant MID...">
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fa-solid fa-key"></i> 2. Paytm Merchant Token / Secret Key</label>
+                                <input type="password" name="merchant_token" class="form-control" value="{{ config.merchant.merchant_token if config.merchant else '' }}" placeholder="Enter Merchant Secret Token...">
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fa-solid fa-qrcode"></i> 3. Merchant UPI ID</label>
+                                <input type="text" name="upi_id" class="form-control" value="{{ config.upi_id }}" required placeholder="paytm@upi">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <input type="checkbox" id="merchant_enabled" name="enabled" value="true" {% if config.merchant and config.merchant.enabled %}checked{% endif %} style="width: 18px; height: 18px; cursor: pointer;">
+                                <label for="merchant_enabled" style="cursor: pointer; margin: 0; font-weight: 600; color: #34d399;">
+                                    Enable Merchant Auto-Approve Payment Verification
+                                </label>
+                            </div>
+                            <button type="submit" class="btn-primary" style="width: auto; padding: 0.7rem 1.5rem;">
+                                <i class="fa-solid fa-floppy-disk"></i> Save Merchant Gateway Settings
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Channel & Course Link Section -->
+                <div class="glass-panel" style="padding: 1.5rem;">
+                    <div class="card-title">
+                        <i class="fa-solid fa-graduation-cap" style="color: #60a5fa;"></i> Channel & Course Access Link Section
+                    </div>
+
+                    <form action="/update_course_link" method="POST">
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-bullhorn"></i> Telegram Channel ID</label>
+                            <input type="text" name="channel_id" class="form-control" value="{{ config.channel_id }}" placeholder="-100123456789" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-link"></i> Course / VIP Access Link</label>
+                            <input type="text" name="course_link" class="form-control" value="{{ config.course_link if config.course_link else '' }}" placeholder="https://t.me/+SampleVIPInviteLink" required>
+                            <small style="color: var(--text-muted);">Payment approve hone par user ko yeh link bhej di jayegi.</small>
+                        </div>
+                        <button type="submit" class="btn-primary">
+                            <i class="fa-solid fa-floppy-disk"></i> Update Channel & Course Link
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Admin ID & Security Settings -->
+                <div class="glass-panel" style="padding: 1.5rem;">
+                    <div class="card-title">
+                        <i class="fa-solid fa-user-shield" style="color: #c084fc;"></i> Admin ID & Security Section
+                    </div>
+
+                    <form action="/update_admin_id" method="POST">
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-id-card"></i> Admin Telegram User ID</label>
+                            <input type="text" name="admin_id" class="form-control" value="{{ config.admin_id if config.admin_id else '' }}" placeholder="123456789" required>
+                            <small style="color: var(--text-muted);">Bot is ID par approval notifications aur alerts bhejega.</small>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-lock"></i> Web Admin Password</label>
+                            <input type="password" name="admin_password" class="form-control" value="{{ config.admin_password }}" required>
+                        </div>
+                        <button type="submit" class="btn-primary">
+                            <i class="fa-solid fa-floppy-disk"></i> Update Admin ID & Password
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Post Demo Welcome Message -->
+                <div class="glass-panel" style="padding: 1.5rem;">
+                    <div class="card-title">
+                        <i class="fa-solid fa-comment-dots" style="color: var(--accent);"></i> Post-Demo Welcome Message
+                    </div>
+
+                    <form action="/update_message" method="POST">
+                        <div class="form-group">
+                            <label>Welcome Message (shown after demo videos in Telegram)</label>
+                            <textarea name="welcome_message" class="form-control" rows="5" required>{{ config.welcome_message }}</textarea>
+                            <small style="color: var(--text-muted);">Markdown supported (*bold*, _italic_)</small>
+                        </div>
+                        <button type="submit" class="btn-primary">
+                            <i class="fa-solid fa-floppy-disk"></i> Update Welcome Message
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Subscription Plans Manager -->
+                <div class="glass-panel" style="padding: 1.5rem; grid-column: 1 / -1;">
+                    <div class="card-title">
+                        <i class="fa-solid fa-layer-group" style="color: var(--success);"></i> Subscription Plans Management
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div>
+                            <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">Current Active Plans</h4>
+                            {% for plan in config.plans %}
+                            <div class="plan-item">
+                                <div class="plan-details">
+                                    <h4>#{{ plan.id }} - {{ plan.name }}</h4>
+                                    <p>Price: ₹{{ plan.price }}</p>
+                                </div>
+                                <form action="/delete_plan" method="POST" style="margin: 0;">
+                                    <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                                    <button type="submit" class="btn-sm btn-reject">
+                                        <i class="fa-solid fa-trash"></i> Delete
+                                    </button>
+                                </form>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div>
+                            <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">Add / Update Plan</h4>
+                            <form action="/save_plan" method="POST">
+                                <div class="form-group">
+                                    <label>Plan ID (e.g. 1, 2, 3)</label>
+                                    <input type="text" name="id" class="form-control" placeholder="1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Plan Name</label>
+                                    <input type="text" name="name" class="form-control" placeholder="1 Month VIP Access" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Price (in INR)</label>
+                                    <input type="number" name="price" class="form-control" placeholder="199" required>
+                                </div>
+                                <button type="submit" class="btn-primary">
+                                    <i class="fa-solid fa-plus"></i> Save Subscription Plan
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Demo Videos Manager -->
+                <div class="glass-panel" style="padding: 1.5rem; grid-column: 1 / -1;">
+                    <div class="card-title">
+                        <i class="fa-solid fa-video" style="color: #60a5fa;"></i> Direct Video File Upload & Management
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div>
+                            <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">Uploaded Demo Videos List</h4>
+                            {% if config.demo_videos %}
+                                {% for video in config.demo_videos %}
+                                <div class="plan-item" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+                                    <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
+                                        <div>
+                                            {% if video is mapping %}
+                                                <strong style="color: #f8fafc;">{{ video.title }}</strong><br>
+                                                <small style="color: #a5b4fc;">📁 {{ video.filename if video.filename else 'Uploaded Video' }}</small>
+                                            {% else %}
+                                                <pre style="font-family: inherit; white-space: pre-wrap; font-size: 0.9rem; color: #f8fafc;">{{ video }}</pre>
+                                            {% endif %}
+                                        </div>
+                                        <form action="/delete_demo_video" method="POST" style="margin: 0;">
+                                            <input type="hidden" name="video_index" value="{{ loop.index0 }}">
+                                            <button type="submit" class="btn-sm btn-reject">
+                                                <i class="fa-solid fa-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p style="color: var(--text-muted);">No demo videos uploaded yet.</p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">Add / Upload Demo Video</h4>
+                            <form action="/save_demo_video" method="POST" enctype="multipart/form-data">
+                                <div class="form-group">
+                                    <label>Video Title / Caption (Optional)</label>
+                                    <input type="text" name="video_title" class="form-control" placeholder="🎬 Demo Video 1: Channel Overview">
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fa-solid fa-file-video"></i> Option A: Select Video File (.mp4, .mov, .mkv)</label>
+                                    <input type="file" name="video_file" class="form-control" accept="video/*">
+                                    <small style="color: #a5b4fc;">Direct video file upload (Up to 200MB supported)</small>
+                                </div>
+                                <div style="text-align: center; color: var(--text-muted); margin: 0.5rem 0; font-size: 0.85rem;">— OR —</div>
+                                <div class="form-group">
+                                    <label><i class="fa-solid fa-link"></i> Option B: Video Link / URL</label>
+                                    <input type="url" name="video_url" class="form-control" placeholder="https://t.me/demo_sample_video/1">
+                                </div>
+                                <button type="submit" class="btn-primary">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i> Save / Upload Demo Video
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Screenshot Image Modal -->
+    <div id="screenshotModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeScreenshot()">&times;</span>
+            <img id="modalImg" src="" alt="Payment Screenshot">
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        function showScreenshot(src) {
+            document.getElementById('modalImg').src = src;
+            document.getElementById('screenshotModal').classList.add('active');
+        }
+
+        function closeScreenshot() {
+            document.getElementById('screenshotModal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>
